@@ -23,16 +23,21 @@ class RegisterController extends Controller
 
     use RegistersUsers;
 
-public function register(Request $request)
+    public function register(Request $request)
     {
-
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
         ]);
-        $hashPassword =Hash::make($validated['password']);
-        $validated['password'] = $hashPassword;
+
+        // Hash the password
+        $validated['password'] = Hash::make($validated['password']);
+
+        // Assign default role_id = 2
+        $validated['role_id'] = 2;
+
+        // Create the user
         $user = User::create($validated);
 
         return response()->json([
@@ -40,4 +45,5 @@ public function register(Request $request)
             'user' => $user,
         ], 201);
     }
+
 }
