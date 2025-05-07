@@ -23,6 +23,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role_id',
+        'hall_id',
     ];
 
     /**
@@ -55,5 +56,9 @@ public function role()
 public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+    public function hall()
+    {
+        return $this->belongsTo(Hall::class);
     }
 }

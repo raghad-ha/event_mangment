@@ -1,5 +1,7 @@
 <?php
 
+// app/Http/Middleware/RoleMiddleware.php
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -12,14 +14,14 @@ class RoleMiddleware
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  string  $role
      */
-    public function handle($request, Closure $next, $role ): Response
+    public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (auth()->check() && auth()->user()->role->name == $role) {
+        if (auth()->check() && auth()->user()->role->name === $role) {
             return $next($request);
         }
 
-        return redirect('/home');
-
+        return response()->json(['message' => 'Forbidden: You do not have access to this resource'], 403);
     }
 }

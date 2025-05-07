@@ -1,4 +1,6 @@
 <?php
+
+// routes/api.php
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\RegisterController;
@@ -17,67 +19,89 @@ Route::post('/login', [LoginController::class, 'login']);
 
 // Routes that require authentication
 Route::middleware('auth:sanctum')->group(function () {
-    // Authenticated user info
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
-
     // ---------------- USER ROUTES ---------------- //
     Route::middleware('role:User')->group(function () {
         // Profile
         Route::get('/users/{id}', [UserController::class, 'show']);
         Route::put('/users/{id}', [UserController::class, 'update']);
-        Route::get('/users', [UserController::class, 'index']);
-        Route::delete('/users/{id}', [UserController::class, 'destroy']);
-
-        // Bookings
         Route::post('/bookings', [BookingController::class, 'store']);
-        Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
-        Route::get('/users/{userId}/halls/{hallId}/bookings', [BookingController::class, 'showBookingsForUserInHall']);
-        Route::post('/bookings/{bookingId}/review', [ReviewController::class, 'store']);
         Route::get('/users/{userId}/bookings', [BookingController::class, 'getBookingsByStatus']);
-
-        // Search Halls and Venues
         Route::get('/halls/search', [HallController::class, 'showByName']);
         Route::get('/search-halls', [HallController::class, 'search']);
-        Route::get('/show-specific-hall/{id}', [HallController::class, 'showSpecificHall']);
+        //Route::get('/show-specific-hall/{id}', [HallController::class, 'showSpecificHall']);هي لازم نقلبها  حسب الاسم
         Route::get('/venues/search', [VenueController::class, 'showByName']);
-        Route::get('/venues/{venueId}', [VenueController::class, 'getVenueById']);
+        Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
+        Route::post('/bookings/{bookingId}/review', [ReviewController::class, 'store']);
+
     });
 
-    // ---------------- ADMIN ROUTES ---------------- //
-    Route::middleware('role:Admin')->group(function () {
-        // Admin dashboard (example)
-        Route::get('/admin', function () {
-            return 'Admin Page';
-        });
+    // ---------------- MANAGER ROUTES ---------------- //
+    Route::middleware('role:Manager')->group(function () {
+        //services:
+        Route::get('/services', [ServiceController::class, 'index']);
 
-        // Events
-        Route::get('/events', [EventController::class, 'index']);
-        Route::post('/events', [EventController::class, 'store']);
-        Route::get('/events/{id}', [EventController::class, 'show']);
-        Route::put('/events/{id}', [EventController::class, 'update']);
-        Route::delete('/events/{id}', [EventController::class, 'destroy']);
-
-        // Halls
-        Route::post('/halls', [HallController::class, 'store']);
-        Route::get('/halls', [HallController::class, 'index']);
-        Route::get('/halls-with-venues-events', [HallController::class, 'getHallsWithVenuesAndEvents']);
-
-        // Venues
-        Route::post('/venues', [VenueController::class, 'store']);
+        //vuens:
+        Route::get('/venues/search', [VenueController::class, 'showByName']);
         Route::get('/venues/rated', [VenueController::class, 'getVenueRatings']);
         Route::get('/venues/hall/{hallId}', [VenueController::class, 'getVenuesByHallId']);
 
-        // Services
+      //hall:
+    Route::get('/search-halls', [HallController::class, 'search']);
+    Route::get('/halls/search', [HallController::class, 'showByName']);
+     // إدارة الخدمات (Services)
         Route::post('/services', [ServiceController::class, 'store']);
         Route::get('/services', [ServiceController::class, 'index']);
         Route::get('/services/{id}', [ServiceController::class, 'show']);
         Route::put('/services/{id}', [ServiceController::class, 'update']);
         Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
 
-        // Bookings management
-        Route::get('/bookings', [BookingController::class, 'index']);
-        Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
+        //booking:
+        Route::get('/users/{userId}/halls/{hallId}/bookings', [BookingController::class, 'showBookingsForUserInHall']);
+        Route::post('/bookings', action: [BookingController::class, 'store']);
+
     });
+
+    // ---------------- ADMIN ROUTES ---------------- //
+
+    Route::middleware('role:Admin')->group(function () {
+
+        //user:
+        Route::put('/users/{id}', [UserController::class, 'update']);
+        Route::delete('/users/{id}', [UserController::class, 'destroy']);
+        Route::get('/users/{id}', [UserController::class, 'show']);
+        Route::get('/users/{userId}/bookings', [BookingController::class, 'getBookingsByStatus']);
+
+         //events:
+    Route::get('/events', [EventController::class, 'index']);
+    Route::post('/events', [EventController::class, 'store']);
+    Route::put('/events/{id}', [EventController::class, 'update']);
+    Route::delete('/events/{id}', [EventController::class, 'destroy']);
+
+  //halls:
+    Route::post('/halls', [HallController::class, 'store']);
+    Route::get('/halls', [HallController::class, 'index']);
+    Route::get('/halls-with-venues-events', [HallController::class, 'getHallsWithVenuesAndEvents']);
+    Route::get('/search-halls', [HallController::class, 'search']);
+    //Route::get('/show-specific-hall/{id}', [HallController::class, 'showSpecificHall']);هي لازم نقلبها  حسب الاسم
+
+//(Venues):
+    Route::post('/venues', [VenueController::class, 'store']);
+    Route::get('/venues/rated', [VenueController::class, 'getVenueRatings']);
+    Route::get('/venues/hall/{hallId}', [VenueController::class, 'getVenuesByHallId']);
+    Route::get('/venues/search', [VenueController::class, 'showByName']);
+
+        // إدارة الخدمات (Services)
+        Route::post('/services', [ServiceController::class, 'store']);
+        Route::get('/services', [ServiceController::class, 'index']);
+        Route::get('/services/{id}', [ServiceController::class, 'show']);
+        Route::put('/services/{id}', [ServiceController::class, 'update']);
+        Route::delete('/services/{id}', [ServiceController::class, 'destroy']);
+
+        // إدارة الحجوزات (جميع الحجوزات)
+    Route::get('/bookings', [BookingController::class, 'index']);
+    Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
+    Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
+    Route::get('/users/{userId}/halls/{hallId}/bookings', [BookingController::class, 'showBookingsForUserInHall']);
+    Route::post('/bookings', action: [BookingController::class, 'store']);
+});
 });

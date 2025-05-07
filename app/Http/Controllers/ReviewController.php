@@ -1,7 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Models\Review;
 use App\Models\Booking;
@@ -10,9 +10,9 @@ class ReviewController extends Controller
 {
     public function store(Request $request, $bookingId)
     {
-        // Validate the incoming request
+        $user_id = Auth::user();
         $request->validate([
-            'user_id' => 'required|exists:users,id',  // Ensure the user exists in the users table
+
             'rating' => 'required|integer|between:1,5',  // Rating must be between 1 and 5
             'comment' => 'nullable|string|max:1000',  // Comment can be null but must be a string if present
         ]);

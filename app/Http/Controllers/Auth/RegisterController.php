@@ -21,29 +21,46 @@ class RegisterController extends Controller
     // |
     // */
 
-    use RegistersUsers;
+
 
     public function register(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        // Manually handle the incoming request data
+        $name = $request->input('name');
+        $email = $request->input('email');
+        $password = $request->input('password');
+        $password_confirmation = $request->input('password_confirmation');
+        $role_id = $request->input('role_id');
+        $hall_id = $request->input('hall_id');
+
+        // Check if password and password_confirmation match
+        if ($password !== $password_confirmation) {
+            return response()->json(['message' => 'Passwords do not match'], 400);
+        }
 
         // Hash the password
-        $validated['password'] = Hash::make($validated['password']);
+        $hashedPassword = Hash::make($password);
 
-        // Assign default role_id = 2
-        $validated['role_id'] = 2;
+        // If the role is Manager, ensure hall_id is provided
+        if ($role_id == 2 && !$hall_id) {  // Assuming '2' is Manager
+            return response()->json(['message' => 'Manager must have a hall_id'], 400);
+        }
 
         // Create the user
-        $user = User::create($validated);
+        try {
+            $user = User::create([
+                'name' => $name,
+                'email' => $email,
+                'password' => $hashedPassword,
+                'role_id' => $role_id,
+                'hall_id' => $hall_id ?? null,  // Assign hall_id only if provided (for Manager)
+            ]);
 
-        return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user,
-        ], 201);
-    }
-
-}
+            return response()->json([
+                'message' => 'User registered successfully',
+                'user' => $user,
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json(['message' => 'An error occurred during registration.'], 500);
+        }
+    }}
