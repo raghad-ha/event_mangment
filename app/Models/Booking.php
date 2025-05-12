@@ -27,4 +27,9 @@ public function user()
     {
         return $this->hasMany(Review::class);
     }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class, 'booking_service');
+    }
 }

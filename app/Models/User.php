@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -10,7 +9,6 @@ use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
     /**
@@ -34,6 +32,17 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'email_verified_at', // إخفاء حقول إضافية
+    ];
+
+    /**
+     * The attributes that should be appended to JSON.
+     *
+     * @var array<string>
+     */
+    protected $appends = [
+        'role_name',
+        'hall_name'
     ];
 
     /**
@@ -49,16 +58,40 @@ class User extends Authenticatable
         ];
     }
 
-public function role()
-{
-    return $this->belongsTo(Role::class);
-}
-public function bookings()
+    // العلاقات
+    public function role()
     {
-        return $this->hasMany(Booking::class);
+        return $this->belongsTo(Role::class);
     }
+
     public function hall()
     {
         return $this->belongsTo(Hall::class);
+    }
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    // Accessors
+    /**
+     * Get the role_name attribute.
+     *
+     * @return string|null
+     */
+    public function getRoleNameAttribute()
+    {
+        return $this->role->name ?? null;
+    }
+
+    /**
+     * Get the hall_name attribute.
+     *
+     * @return string|null
+     */
+    public function getHallNameAttribute()
+    {
+        return $this->hall->name ?? null;
     }
 }

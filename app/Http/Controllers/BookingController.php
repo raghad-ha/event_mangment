@@ -7,18 +7,23 @@ use App\Models\Venue;
 use App\Models\EventType;
 use App\Models\User;
 use Illuminate\Support\Facades\Validator;
+use App\Http\Controllers\BaiseController;
+use Illuminate\Support\Facades\Auth;
 
-class BookingController extends Controller
+class BookingController extends BaiseController
 {
-    public function store(Request $request)
+public function store(Request $request)
     {
+        $userId = Auth::id();
+
         // Validate the incoming request
         $validator = Validator::make($request->all(), [
-            'user_id' => 'required|exists:users,id', // Ensure the user exists
             'venue_id' => 'required|exists:venues,id', // Ensure the venue exists
             'event_type_id' => 'required|exists:event_types,id', // Ensure the event type exists
             'booking_date' => 'required|date', // Ensure the date is valid
-            'status' => 'required|in:Pending,Confirmed,Cancelled', // Status validation
+            'status' => 'in:Pending,Confirmed,Cancelled', // Optional, with valid values
+            'services' => 'required|array',  // Validate that services are provided
+            'services.*' => 'exists:services,id'  // Ensure each selected service is valid
         ]);
 
         // If validation fails, return error messages
@@ -26,24 +31,41 @@ class BookingController extends Controller
             return response()->json($validator->errors(), 400);
         }
 
+        // Fetch the venue and its associated hall
+        $venue = Venue::find($request->venue_id);
+        $hall = $venue->hall;  // Assuming Venue has a 'hall' relationship
+
+        // Ensure the services belong to the hall of the selected venue
+        $availableServices = $hall->services->pluck('id')->toArray();
+
+        // Check if each selected service is valid for the hall
+        $invalidServices = array_diff($request->services, $availableServices);
+
+        if (!empty($invalidServices)) {
+            return response()->json(['message' => 'One or more selected services are not available for this hall.'], 400);
+        }
+
         // Check if the venue is available on the selected date (optional)
         $existingBooking = Booking::where('venue_id', $request->venue_id)
-->where('booking_date', $request->booking_date)->first();
+            ->where('booking_date', $request->booking_date)
+            ->first();
 
         if ($existingBooking) {
             return response()->json(['message' => 'The venue is already booked for this date.'], 400);
         }
 
-        // Create a new booking
+        // Create a new booking with default status 'Pending' if not provided
         $booking = Booking::create([
-            'user_id' => $request->user_id,
+            'user_id' => $userId,
             'venue_id' => $request->venue_id,
             'event_type_id' => $request->event_type_id,
             'booking_date' => $request->booking_date,
-            'status' => $request->status,
+            'status' => $request->status ?? 'Pending', // default to 'Pending'
         ]);
 
-        // Return the created booking as a response
+        // Attach the selected services to the booking
+        $booking->services()->attach($request->services);
+
         return response()->json($booking, 201);
     }
     public function updateStatus(Request $request, $id)
@@ -72,13 +94,16 @@ class BookingController extends Controller
     }
     public function showBookingsForUserInHall(Request $request, $userId, $hallId)
     {
+
+
+        // if ($this->isManagerAndUnauthorizedById($hallId)) {
+        //     return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        // }
         // Find the user by ID
         $user = User::find($userId);
 
         // Check if the user exists
-        if (!$user) {
-            return response()->json(['message' => 'User not found.'], 404);
-        }
+
 
         // Find all venues in the specific hall
         $venues = Venue::where('hall_id', $hallId)->get();
@@ -157,4 +182,6 @@ class BookingController extends Controller
         // Return the bookings as a response
         return response()->json($bookings);
     }
+
+
 }

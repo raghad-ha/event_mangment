@@ -5,17 +5,29 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
-
+use App\Http\Controllers\BaiseController;
+use Illuminate\Support\Facades\Auth;
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        $users = User::all(); // Get all users from the database
-        return response()->json($users);
-    }
+
+public function index()
+{
+    $users = User::with(['role', 'hall'])->get(); // تحميل العلاقات مسبقًا
+
+    // تعديل الـ response لاستخراج الأسماء فقط
+    $users->transform(function ($user) {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role_name' => $user->role->name ?? null, // استخدام العلاقة
+            'hall_name' => $user->hall->name ?? null,
+            // ... أضف حقول أخرى حسب الحاجة
+        ];
+    });
+
+    return response()->json($users);
+}
 
     public function show($id)
     {

@@ -6,11 +6,15 @@ use Illuminate\Http\Request;
 use App\Models\Venue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Http\Controllers\BaiseController;
+use App\Models\Hall;
+use Illuminate\Support\Facades\Auth;
 
-class VenueController extends Controller
+class VenueController extends BaiseController
 {
     public function getVenuesByHallId($hallId)
     {
+
         // Get the venues that belong to the given hall_id
         $venues = Venue::where('hall_id', $hallId)->get();
 
@@ -60,15 +64,32 @@ class VenueController extends Controller
     }
     public function store(Request $request)
     {
+
+        // Ensure the manager is authorized to manage the specified hall
+        //if ($this->isManagerAndUnauthorized($request->hall_name)) {
+           // return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+       // }
+
         // Validate the incoming request
         $request->validate([
             'name' => 'required|string|max:255',
             'capacity' => 'required|integer',
             'price' => 'required|numeric',
-            'hall_id' => 'required|exists:halls,id',  // Ensure the hall exists
+            'hall_name' => 'required|string|exists:halls,name',  // Validate hall name
             'images' => 'required|array',  // Ensure 'images' is an array
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg',  // Validate each image
         ]);
+
+        // Check if the hall exists based on the hall name
+        $hall = Hall::where('name', $request->hall_name)->first();
+
+        // Ensure the hall exists
+        if (!$hall) {
+            return response()->json(['message' => 'Hall not found.'], 404);
+        }
+
+        // Ensure the manager is authorized to access the hall (check if hall belongs to the manager)
+
 
         $imageUrls = [];
 
@@ -94,7 +115,7 @@ class VenueController extends Controller
             'name' => $request->name,
             'capacity' => $request->capacity,
             'price' => $request->price,
-            'hall_id' => $request->hall_id,  // Save the hall ID
+            'hall_id' => $hall->id,  // Use hall ID to associate the venue with the hall
             'image' => json_encode($imageUrls),  // Convert the array to JSON
         ]);
 
@@ -149,5 +170,45 @@ public function getVenueRatings()
         // Return the venues along with their average ratings
         return response()->json($sortedVenues);
     }
+    public function destroy($id)
+    {
+        // Ensure the manager is authorized to delete this venue
+        if ($this->isManagerAndUnauthorizedById($id)) {
+            return response()->json(['message' => 'You are not authorized to delete a venue for this hall.'], 403);
+        }
 
+        // Find the venue by ID
+        $venue = Venue::find($id);
+
+        // If the venue does not exist, return an error
+        if (!$venue) {
+            return response()->json(['message' => 'Venue not found.'], 404);
+        }
+
+        // Delete the venue
+        $venue->delete();
+
+        // Return a success message
+        return response()->json(['message' => 'Venue deleted successfully.'], 200);
+    }
+
+public function getAllVenuesWithHalls()
+{
+    // جلب جميع القاعات مع معلومات الصالة المرتبطة بها
+    $venues = Venue::with('hall')->get();
+
+    // إذا لم توجد قاعات
+    if ($venues->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No venues found in any hall.'
+        ], 404);
+    }
+
+    // إرجاع القاعات مع الصالات
+    return response()->json([
+        'success' => true,
+        'data' => $venues
+    ]);
+}
 }

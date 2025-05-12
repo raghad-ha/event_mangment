@@ -12,7 +12,7 @@ class Hall extends Model
 }
 public function services()
     {
-        return $this->hasMany(Service::class);
+        return $this->belongsToMany(Service::class, 'hall_service');
     }
     protected $fillable = [
         'name',

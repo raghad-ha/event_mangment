@@ -16,4 +16,12 @@ class Service extends Model
         'name',  // Name of the service
         'price', // Price of the service
     ];
+    public function halls()
+    {
+        return $this->belongsToMany(Hall::class, 'hall_service');
+    }
+    public function bookings()
+    {
+        return $this->belongsToMany(Booking::class, 'booking_service');
+    }
 }

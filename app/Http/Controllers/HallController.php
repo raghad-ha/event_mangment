@@ -6,56 +6,67 @@ use Illuminate\Http\Request;
 use App\Models\Hall;
 use App\Models\Venue;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class HallController extends Controller
 {
     public function search(Request $request)
-    {
-        // Start with the Venue model
-        $query = Venue::query();
+{
+    // Start with the Venue model
+    $query = Venue::query();
 
-        // Filter by Hall name (if provided)
-        if ($request->has('hall_name') && $request->hall_name) {
-            $query->whereHas('hall', function ($query) use ($request) {
-                $query->where('name', 'like', '%' . $request->hall_name . '%');
-            });
-        }
-
-        // Filter by Venue capacity (if provided)
-        if ($request->has('capacity') && $request->capacity) {
-            $query->where('capacity', '>=', $request->capacity);
-        }
-
-        // Filter by Venue price range (min and max)
-        if ($request->has('min_price') && $request->min_price) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        if ($request->has('max_price') && $request->max_price) {
-            $query->where('price', '<=', $request->max_price);
-        }
-
-        // Filter by Event name (if provided)
-        if ($request->has('event_name') && $request->event_name) {
-            $query->whereHas('events', function ($query) use ($request) {
-                $query->where('name', 'like', '%' . $request->event_name . '%');
-            });
-        }
-
-        // Filter by Date (availability check)
-        if ($request->has('date') && $request->date) {
-            $query->whereDoesntHave('bookings', function ($query) use ($request) {
-                $query->where('booking_date', $request->date);
-            });
-        }
-
-        // Execute the query and get the results
-        $venues = $query->get();
-
-        return response()->json($venues);
+    // Filter by Hall name (if provided)
+    if ($request->has('hall_name') && $request->hall_name) {
+        $query->whereHas('hall', function ($query) use ($request) {
+            $query->where('name', 'like', '%' . $request->hall_name . '%');
+        });
     }
+
+    // Filter by Hall location (if provided)
+    if ($request->has('location') && $request->location) {
+        $query->whereHas('hall', function ($query) use ($request) {
+            $query->where('location', 'like', '%' . $request->location . '%');
+        });
+    }
+
+    // Filter by Venue capacity (if provided)
+    if ($request->has('capacity') && $request->capacity) {
+        $query->where('capacity', '>=', $request->capacity);
+    }
+
+    // Filter by Venue price range (min and max)
+    if ($request->has('min_price') && $request->min_price) {
+        $query->where('price', '>=', $request->min_price);
+    }
+    if ($request->has('max_price') && $request->max_price) {
+        $query->where('price', '<=', $request->max_price);
+    }
+
+    // Filter by Event name (if provided)
+    if ($request->has('event_name') && $request->event_name) {
+        $query->whereHas('events', function ($query) use ($request) {
+            $query->where('name', 'like', '%' . $request->event_name . '%');
+        });
+    }
+
+    // Filter by Date (availability check)
+    if ($request->has('date') && $request->date) {
+        $query->whereDoesntHave('bookings', function ($query) use ($request) {
+            $query->where('booking_date', $request->date);
+        });
+    }
+
+    // Execute the query and get the results
+    $venues = $query->get();
+
+    return response()->json($venues);
+}
 
     public function showByName(Request $request)
     {
+        if ($this->isManagerAndUnauthorized($request->hallName)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         // Get the hall name from the request
         $hallName = $request->input('name');
 
@@ -76,6 +87,9 @@ class HallController extends Controller
         return response()->json($halls);
     }
     public function showSpecificHall(Request $request , $id){
+        if ($this->isManagerAndUnauthorized($request->hallName)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         $hall = Hall::findOrFail($id);
         if($hall){
             return response()->json([
@@ -93,6 +107,7 @@ class HallController extends Controller
     }
     public function store(Request $request)
     {
+
         // Validate the incoming request
         $request->validate([
             'name' => 'required|string|max:255',
@@ -130,5 +145,77 @@ class HallController extends Controller
         // Return the created hall as a response
         return response()->json($hall, 201);
     }
+    public function destroy($id)
+    {
 
-}
+
+        // Find the hall by ID
+        $hall = Hall::find($id);
+
+        // If the hall does not exist, return an error
+        if (!$hall) {
+            return response()->json(['message' => 'Hall not found.'], 404);
+        }
+
+        // Delete the hall
+        $hall->delete();
+
+        // Return a success message
+        return response()->json(['message' => 'Hall deleted successfully.'], 200);
+    }
+public function getVenuesWithBookings($hallId)
+    {
+        // Fetch the hall by its ID
+        $hall = Hall::find($hallId);
+
+        // If the hall is not found, return a 404 error
+        if (!$hall) {
+            return response()->json(['message' => 'Hall not found.'], 404);
+        }
+
+        // Get the venues associated with the hall
+        $venues = $hall->venues;
+
+        // Initialize an empty array to store the result
+        $result = [
+            'hall' => $hall,
+            'venues' => []
+        ];
+
+        // Loop through each venue to check for bookings, users, and services
+        foreach ($venues as $venue) {
+            // Get the bookings for the venue, including the associated user and services
+            $bookings = $venue->bookings()
+                ->with(['user', 'services'])  // Eager load the user and services for each booking
+                ->get();
+
+            // If there are bookings, add the venue and its bookings with users and services to the result
+            if ($bookings->isNotEmpty()) {
+                $result['venues'][] = [
+                    'venue' => $venue,
+                    'bookings' => $bookings->map(function ($booking) {
+                        return [
+                            'booking_id' => $booking->id,
+                            'booking_date' => $booking->booking_date,
+                            'status' => $booking->status,
+                            'user' => [
+                                'id' => $booking->user->id,
+                                'name' => $booking->user->name,
+                                'email' => $booking->user->email
+                            ],
+                            'services' => $booking->services->map(function ($service) {
+                                return [
+                                    'id' => $service->id,
+                                    'name' => $service->name,
+                                    'price' => $service->price
+                                ];
+                            })
+                        ];
+                    }),
+                ];
+            }
+        }
+
+        // Return the result with venues that have bookings
+        return response()->json($result);
+    }}

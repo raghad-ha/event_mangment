@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 use App\Models\Event;
 use Illuminate\Http\Request;
+use App\Http\Controllers\BaiseController;
+use Illuminate\Support\Facades\Auth;
 
 class EventController extends Controller
 {

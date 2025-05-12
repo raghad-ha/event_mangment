@@ -10,17 +10,13 @@ class ReviewController extends Controller
 {
     public function store(Request $request, $bookingId)
     {
-        $user_id = Auth::user();
-        $request->validate([
 
+        $userId=Auth::id();
+        // Validate the incoming request
+        $request->validate([
             'rating' => 'required|integer|between:1,5',  // Rating must be between 1 and 5
             'comment' => 'nullable|string|max:1000',  // Comment can be null but must be a string if present
         ]);
-
-        // Get the user provided in the request
-        $user = User::find($request->user_id);
-
-        // Check if the booking exists
         $booking = Booking::find($bookingId);
 
         if (!$booking) {
@@ -28,13 +24,13 @@ class ReviewController extends Controller
         }
 
         // Ensure the booking is associated with the user
-        if ($booking->user_id !== $user->id) {
+        if ($booking->user_id !==  $userId) {
             return response()->json(['message' => 'This booking does not belong to the user.'], 403);
         }
 
         // Create the review
         $review = Review::create([
-            'user_id' => $user->id,            // User ID provided in the request
+            'user_id' =>  $userId,            // User ID provided in the request
             'booking_id' => $booking->id,      // The booking being reviewed
             'rating' => $request->rating,      // Rating (1-5)
             'comment' => $request->comment,    // Comment (nullable)
