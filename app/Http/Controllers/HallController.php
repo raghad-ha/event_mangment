@@ -112,6 +112,7 @@ class HallController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'location' => 'required|string|max:255',
+            'description' => 'nullable|string',
             'images' => 'required|array',  // Ensure 'images' is an array
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg', // Validate each image
         ]);
@@ -139,6 +140,7 @@ class HallController extends Controller
         $hall = Hall::create([
             'name' => $request->name,
             'location' => $request->location,
+            'description' => $request->description,
             'image' => json_encode($imageUrls),  // Convert the array to JSON
         ]);
 
