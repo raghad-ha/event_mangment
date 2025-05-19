@@ -167,6 +167,9 @@ class HallController extends Controller
     }
 public function getVenuesWithBookings($hallId)
     {
+        if ($this->isManagerAndUnauthorizedById($hallId)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         // Fetch the hall by its ID
         $hall = Hall::find($hallId);
 
@@ -220,4 +223,79 @@ public function getVenuesWithBookings($hallId)
 
         // Return the result with venues that have bookings
         return response()->json($result);
-    }}
+    }
+
+public function update(Request $request, $id)
+{
+    // Find the hall to update
+    $hall = Hall::findOrFail($id);
+
+    // Validate the incoming request
+    $request->validate([
+        'name' => 'sometimes|string|max:255',
+        'location' => 'sometimes|string|max:255',
+        'description' => 'nullable|string',
+        'images' => 'sometimes|array',  // Optional array of images
+        'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg', // Validate each image if provided
+        'remove_images' => 'sometimes|array', // Array of image URLs to remove
+    ]);
+
+    // Update basic fields if they exist in the request
+    $updateData = [];
+    if ($request->has('name')) {
+        $updateData['name'] = $request->name;
+    }
+    if ($request->has('location')) {
+        $updateData['location'] = $request->location;
+    }
+    if ($request->has('description')) {
+        $updateData['description'] = $request->description;
+    }
+
+    // Handle image updates if new images are provided
+    if ($request->hasFile('images')) {
+        $imageUrls = json_decode($hall->image, true) ?? [];
+
+        // Add new images
+        foreach ($request->file('images') as $image) {
+            $timestamp = now()->format('Ymd_His');
+            $imageExtension = $image->getClientOriginalExtension();
+            $imageName = "venue_{$timestamp}.{$imageExtension}";
+
+            $imagePath = $image->storeAs('venues', $imageName, 'public');
+            $imageUrl = Storage::url($imagePath);
+
+            $imageUrls[] = $imageUrl;
+        }
+
+        $updateData['image'] = json_encode($imageUrls);
+    }
+
+    // Handle image removal if requested
+    if ($request->has('remove_images')) {
+        $currentImages = json_decode($hall->image, true) ?? [];
+        $imagesToRemove = $request->remove_images;
+
+        // Filter out images to remove
+        $updatedImages = array_filter($currentImages, function($imageUrl) use ($imagesToRemove) {
+            return !in_array($imageUrl, $imagesToRemove);
+        });
+
+        // Also delete the actual files from storage
+        foreach ($imagesToRemove as $imageUrl) {
+            $path = str_replace('/storage/', '', $imageUrl);
+            Storage::disk('public')->delete($path);
+        }
+
+        $updateData['image'] = json_encode(array_values($updatedImages));
+    }
+
+    // Update the hall record
+    $hall->update($updateData);
+
+    return response()->json([
+        'message' => 'Hall updated successfully',
+        'hall' => $hall
+    ]);
+}
+}

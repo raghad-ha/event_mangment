@@ -14,7 +14,9 @@ class VenueController extends BaiseController
 {
     public function getVenuesByHallId($hallId)
     {
-
+if ($this->isManagerAndUnauthorizedById($hallId)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         // Get the venues that belong to the given hall_id
         $venues = Venue::where('hall_id', $hallId)->get();
 
@@ -30,45 +32,59 @@ class VenueController extends BaiseController
         return response()->json($venues);
     }
 
-    public function showByName(Request $request)
-    {
-        // Get the venue name from the request
-        $venueName = $request->input('name');
+ public function showByName(Request $request)
+{
 
-        // Search for the venue by name (case insensitive)
-        $venue = Venue::where('name', 'like', '%' . $venueName . '%')->first();
+    // Get the venue name from the request
+    $venueName = $request->input('name');
 
-        // Check if the venue exists
-        if (!$venue) {
-            return response()->json(['message' => 'Venue not found.'], 404);
-        }
+    // Find the venue by name (case-insensitive) and include the hall relationship
+    $venue = Venue::with('hall') // Assuming you have a 'hall' relationship in your Venue model
+        ->where('name', 'like', '%' . $venueName . '%')
+        ->first();
 
-        // Return the venue information
-        return response()->json($venue);
+    // Check if the venue exists
+    if (!$venue) {
+        return response()->json(['message' => 'Venue not found.'], 404);
     }
+if ($this->isManagerAndUnauthorizedById($venue->hall_id)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
+    // Return the venue information including hall_id
+    return response()->json([
+        'venue' => $venue,
+        'hall_id' => $venue->hall_id,
+        'hall_details' => $venue->hall // This will include all hall details if relationship exists
+    ]);
+}
     public function getVenueById($venueId)
-    {
-        // Find the venue by its id
-        $venue = Venue::find($venueId);
+{
+    // Find the venue by its id with hall relationship eager loaded
+    $venue = Venue::with('hall')->find($venueId);
 
-        // Check if the venue exists
-        if (!$venue) {
-            // Return a custom message if the venue is not found
-            return response()->json([
-                'message' => 'Venue not found.'
-            ], 404); // You can use 404 or any other HTTP status code
-        }
-
-        // Return the venue details as a JSON response
-        return response()->json($venue);
+    // Check if the venue exists
+    if (!$venue) {
+        return response()->json([
+            'message' => 'Venue not found.'
+        ], 404);
     }
+if ($this->isManagerAndUnauthorizedById($venue->hall_id)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
+    // Return the venue details with hall information
+    return response()->json([
+        'venue' => $venue,
+        'hall_id' => $venue->hall_id,
+        'hall_details' => $venue->hall // All hall details
+    ]);
+}
     public function store(Request $request)
     {
 
-        // Ensure the manager is authorized to manage the specified hall
-        //if ($this->isManagerAndUnauthorized($request->hall_name)) {
-           // return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-       // }
+        //Ensure the manager is authorized to manage the specified hall
+        if ($this->isManagerAndUnauthorized($request->hall_name)) {
+           return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+       }
 
         // Validate the incoming request
         $request->validate([
@@ -210,5 +226,71 @@ public function getAllVenuesWithHalls()
         'success' => true,
         'data' => $venues
     ]);
+}
+public function update(Request $request, $id)
+{
+    if ($this->isManagerAndUnauthorized($request->hall_name)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
+    // Validate the incoming request
+    $request->validate([
+        'name' => 'sometimes|string|max:255',
+        'capacity' => 'sometimes|integer',
+        'price' => 'sometimes|numeric',
+        'hall_name' => 'sometimes|string|exists:halls,name',
+        'images' => 'sometimes|array',
+        'images.*' => 'sometimes|image|mimes:jpeg,png,jpg,gif,svg',
+    ]);
+
+    // Find the venue by ID
+    $venue = Venue::find($id);
+
+    if (!$venue) {
+        return response()->json(['message' => 'Venue not found.'], 404);
+    }
+
+    // Update hall_id if hall_name is provided
+    if ($request->has('hall_name')) {
+        $hall = Hall::where('name', $request->hall_name)->first();
+        if (!$hall) {
+            return response()->json(['message' => 'Hall not found.'], 404);
+        }
+        $venue->hall_id = $hall->id;
+    }
+
+    // Update basic fields
+    $venue->fill($request->only(['name', 'capacity', 'price']));
+
+    // Handle image updates
+    if ($request->hasFile('images')) {
+        // Delete old images (optional)
+        $oldImages = json_decode($venue->image, true);
+        if (is_array($oldImages)) {
+            foreach ($oldImages as $oldImage) {
+                $oldImagePath = str_replace('/storage/', '', $oldImage);
+                Storage::disk('public')->delete($oldImagePath);
+            }
+        }
+
+        // Upload new images
+        $imageUrls = [];
+        foreach ($request->file('images') as $image) {
+            $timestamp = now()->format('Ymd_His');
+            $imageExtension = $image->getClientOriginalExtension();
+            $imageName = "venue_{$timestamp}.{$imageExtension}";
+            $imagePath = $image->storeAs('venues', $imageName, 'public');
+            $imageUrl = Storage::url($imagePath);
+            $imageUrls[] = $imageUrl;
+        }
+
+        $venue->image = json_encode($imageUrls);
+    }
+
+    $venue->save();
+
+    return response()->json([
+        'message' => 'Venue updated successfully',
+        'data' => $venue
+    ], 200);
 }
 }

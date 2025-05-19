@@ -32,7 +32,7 @@ public function index()
     public function show($id)
     {
         // Find the user by id
-        $user = User::find($id);
+       $user= Auth::id();
 
         // Check if the user exists
         if (!$user) {
@@ -54,7 +54,9 @@ public function index()
         ]);
 
         // Find the user by id
-        $user = User::find($id);
+        $userId = Auth::id();
+        $user = User::find($userId);
+
 
         // Check if the user exists
         if (!$user) {

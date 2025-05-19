@@ -81,9 +81,9 @@ class ServiceController extends BaiseController
     }
     public function index(Request $request)
     {
-       // if ($this->isManagerAndUnauthorized($request->hallName)) {
-         //   return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        //}
+       if ($this->isManagerAndUnauthorized($request->hallName)) {
+         return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         // Optional: Pagination for large datasets
         $perPage = $request->query('per_page', default: 10);  // Default to 10 services per page
         $services = Service::paginate($perPage); // Paginate the results
@@ -114,9 +114,9 @@ class ServiceController extends BaiseController
     }
     public function storeForHall(Request $request, $hallName)
     {
-       // if ($this->isManagerAndUnauthorized($hallName)) {
-           // return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-       // }
+       if ($this->isManagerAndUnauthorized($hallName)) {
+           return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+       }
         // Validate the incoming request
         $request->validate([
             'name' => 'required|string|max:255|unique:services,name', // Service name must be unique
@@ -149,12 +149,9 @@ class ServiceController extends BaiseController
     }
     public function getServicesByHallName($hallName)
     {
-        //return 1;
-        //$role=$this->isManagerAndUnauthorized($hallName);
-        //return $role;
-        //if ($this->isManagerAndUnauthorized($hallName)) {
-           // return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        //}
+                if ($this->isManagerAndUnauthorized($hallName)) {
+           return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
 
 
         // Find the hall by its name

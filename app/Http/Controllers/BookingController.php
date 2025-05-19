@@ -70,6 +70,7 @@ public function store(Request $request)
     }
     public function updateStatus(Request $request, $id)
     {
+        $userId = Auth::id();
         // Validate the incoming request to ensure the status is valid
         $request->validate([
             'status' => 'required|in:Pending,Confirmed,Cancelled', // Status validation
@@ -95,14 +96,13 @@ public function store(Request $request)
     public function showBookingsForUserInHall(Request $request, $userId, $hallId)
     {
 
-
-        // if ($this->isManagerAndUnauthorizedById($hallId)) {
-        //     return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        // }
+        if ($this->isManagerAndUnauthorizedById($hallId)) {
+            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+        }
         // Find the user by ID
-        $user = User::find($userId);
+        $userId = Auth::id();
 
-        // Check if the user exists
+
 
 
         // Find all venues in the specific hall
@@ -145,7 +145,7 @@ public function store(Request $request)
         ]);
 
         // Find the user by id
-        $user = User::find($userId);
+        $user = Auth::id();
 
         // Check if the user exists
         if (!$user) {
