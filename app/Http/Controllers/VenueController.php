@@ -14,9 +14,9 @@ class VenueController extends BaiseController
 {
     public function getVenuesByHallId($hallId)
     {
-if ($this->isManagerAndUnauthorizedById($hallId)) {
-            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        }
+// if ($this->isManagerAndUnauthorizedById($hallId)) {
+//             return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+//         }
         // Get the venues that belong to the given hall_id
         $venues = Venue::where('hall_id', $hallId)->get();
 
@@ -68,9 +68,6 @@ if ($this->isManagerAndUnauthorizedById($venue->hall_id)) {
             'message' => 'Venue not found.'
         ], 404);
     }
-if ($this->isManagerAndUnauthorizedById($venue->hall_id)) {
-            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        }
     // Return the venue details with hall information
     return response()->json([
         'venue' => $venue,
@@ -293,4 +290,46 @@ public function update(Request $request, $id)
         'data' => $venue
     ], 200);
 }
+
+public function getVenuesByHallName($hallName)
+{
+    // البحث عن جميع الصالات التي تحتوي على الاسم المدخل
+    $halls = Hall::where('name', 'like', '%' . $hallName . '%')->get();
+
+    if ($halls->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No halls found',
+            'searched_name' => $hallName
+        ], 404);
+    }
+
+    // تجهيز البيانات مع القاعات وقاعاتها المرتبطة
+    $response = [
+        'success' => true,
+        'total_halls' => $halls->count(),
+        'halls' => $halls->map(function ($hall) {
+            return [
+                'id' => $hall->id,
+                'name' => $hall->name,
+                'location' => $hall->location,
+                'total_venues' => $hall->venues()->count(),
+                'venues' => $hall->venues->map(function ($venue) {
+                    return [
+                        'id' => $venue->id,
+                        'name' => $venue->name,
+                        'capacity' => $venue->capacity,
+                        'price' => $venue->price,
+                        'image' => $venue->image,
+                        'created_at' => optional($venue->created_at)->format('Y-m-d H:i:s'),
+                        'updated_at' => optional($venue->updated_at)->format('Y-m-d H:i:s')
+                    ];
+                })
+            ];
+        })
+    ];
+
+    return response()->json($response);
+}
+
 }

@@ -14,16 +14,21 @@ use App\Http\Controllers\ReviewController;
 
 Route::post('/register', [RegisterController::class, 'register']);
 Route::post('/login', [LoginController::class, 'login']);
+Route::get('/events', [EventController::class, 'index']);
+
+Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
 
 // Authenticated Routes
 Route::middleware('auth:sanctum')->group(function () {
+Route::get('/users/{userId}/bookings', [BookingController::class, 'getBookingsByStatus']);
+Route::get('/profile', [UserController::class, 'profile']);
 
 //halls:
 Route::get('/halls', [HallController::class, 'index']);
 Route::get('/halls/search', [HallController::class, 'showByName']);
 Route::get('/search-halls', [HallController::class, 'search']);
-Route::get('/halls/search', [HallController::class, 'search']);
-Route::get('/halls/by-name', [HallController::class, 'showByName']);
+//Route::get('/halls/search', [HallController::class, 'search']);
+//Route::get('/halls/by-name', [HallController::class, 'showByName']);
 Route::get('/halls/{id}', [HallController::class, 'showSpecificHall']);
 //booking:
 Route::put('/bookings/{id}/status', [BookingController::class, 'updateStatus']);
@@ -38,9 +43,11 @@ Route::get('/venues/{venueId}', [VenueController::class, 'getVenueById']);
 Route::get('/venues/sorted/price', [VenueController::class, 'getVenuesSortedByPrice']);
 Route::get('/venues/sorted/halls', [VenueController::class, 'getVenuesSortedByHalls']);
 Route::get('/venues/ratings', [VenueController::class, 'getVenueRatings']);
+Route::get('/venues/by-hall/{hallName}', [VenueController::class, 'getVenuesByHallName']);
 
 //user:
 Route::get('/users/{id}', [UserController::class, 'show']);
+
 
 //events:
         // List all events
@@ -54,9 +61,10 @@ Route::get('/services', [ServiceController::class, 'index']);
 
     // ----------------- USER ROUTES ----------------- //
     Route::middleware('role:User')->group(function () {
-        Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
+        //Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
         Route::post('/bookings', [BookingController::class, 'store']);
         Route::post('/bookings/{bookingId}/review', [ReviewController::class, 'store']);
+
 
     });
 
@@ -70,13 +78,13 @@ Route::get('/services', [ServiceController::class, 'index']);
         Route::post('/services/hall/{hallName}', [ServiceController::class, 'storeForHall']);
         Route::get('/events/{id}', [EventController::class, 'show']);
         Route::delete('/venues/{id}', [VenueController::class, 'destroy']);
-        Route::get('/events', [EventController::class, 'index']);
+        //Route::get('/events', [EventController::class, 'index']);
         Route::get('/services/with-halls', [ServiceController::class, 'getServicesWithHalls']);
         Route::get('/services/{id}', [ServiceController::class, 'show']);
         Route::get('/users/{userId}/halls/{hallId}/bookings', [BookingController::class, 'showBookingsForUserInHall']);
         Route::get('/halls/{hallId}/venues-with-bookings', [HallController::class, 'getVenuesWithBookings']);
-        Route::get('/users/{userId}/bookings', [BookingController::class, 'getBookingsByStatus']);
-Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
+        //Route::get('/users/{userId}/bookings', [BookingController::class, 'getBookingsByStatus']);
+//Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
     });
 
 
@@ -84,8 +92,8 @@ Route::get('/users/{userId}/bookings', [UserController::class, 'showBookings']);
     Route::middleware('role:Admin')->group(function () {
         Route::get('/users', [UserController::class, 'index']);
         Route::delete('/users/{id}', [UserController::class, 'destroy']);
-        Route::apiResource('/events', EventController::class);
-        Route::put('/users/{id}', [UserController::class, 'update']);
+        //Route::apiResource('/events', EventController::class);
+        //Route::put('/users/{id}', [UserController::class, 'update']);
         Route::get('/halls-with-venues-events', [HallController::class, 'getHallsWithVenuesAndEvents']);
         Route::get('/bookings', [BookingController::class, 'index']);
 

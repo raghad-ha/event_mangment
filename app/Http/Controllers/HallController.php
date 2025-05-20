@@ -31,7 +31,7 @@ class HallController extends Controller
 
     // Filter by Venue capacity (if provided)
     if ($request->has('capacity') && $request->capacity) {
-        $query->where('capacity', '>=', $request->capacity);
+        $query->where('capacity', '=', $request->capacity);
     }
 
     // Filter by Venue price range (min and max)
@@ -62,25 +62,30 @@ class HallController extends Controller
     return response()->json($venues);
 }
 
-    public function showByName(Request $request)
-    {
-        if ($this->isManagerAndUnauthorized($request->hallName)) {
-            return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        }
-        // Get the hall name from the request
-        $hallName = $request->input('name');
-
-        // Search for the hall by name (case insensitive)
-        $hall = Hall::where('name', 'like', '%' . $hallName . '%')->first();
-
-        // Check if the hall exists
-        if (!$hall) {
-            return response()->json(['message' => 'Hall not found.'], 404);
-        }
-
-        // Return the hall information
-        return response()->json($hall);
+public function showByName(Request $request)
+{
+    if ($this->isManagerAndUnauthorized($request->hallName)) {
+        return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
     }
+
+    // Get the hall name from the request
+    $hallName = $request->input('hallName');
+
+    // Find the hall and load venues using Eloquent relationships
+    $hall = Hall::where('name', $hallName)->with('venues')->first();
+
+    if (!$hall) {
+        return response()->json(['message' => 'Hall not found.'], 404);
+    }
+
+    return response()->json([
+        'hall_name' => $hall->name,
+        'venues' => $hall->venues
+    ]);
+}
+
+
+
     public function index()
     {
         $halls = Hall::all(); // Get all halls from the database

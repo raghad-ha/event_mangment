@@ -32,4 +32,8 @@ public function user()
     {
         return $this->belongsToMany(Service::class, 'booking_service');
     }
+    public function bookings()
+{
+    return $this->hasMany(Booking::class);
+}
 }

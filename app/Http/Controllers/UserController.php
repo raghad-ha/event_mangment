@@ -54,8 +54,8 @@ public function index()
         ]);
 
         // Find the user by id
-        $userId = Auth::id();
-        $user = User::find($userId);
+        //$userId = Auth::id();
+        $user = User::find($id);
 
 
         // Check if the user exists
@@ -122,4 +122,33 @@ public function index()
         // Return the user's bookings
         return response()->json($bookings);
     }
+   public function profile(Request $request)
+{
+    
+    // Get user ID from request (if needed)
+
+    $userId = $request->input('user_id');
+
+    // Fetch user without requiring authentication
+    $user = User::with(['role', 'hall'])->find($userId);
+
+    // If user is not found, return an error response
+    if (!$user) {
+        return response()->json(['message' => 'User not found.'], 404);
+    }
+
+    // Build response data
+    $profileData = [
+        'id' => $user->id,
+        'name' => $user->name,
+        'email' => $user->email,
+        'role_name' => $user->role->name ?? 'No assigned role',
+        'hall_name' => $user->hall->name ?? 'No assigned hall',
+        'created_at' => $user->created_at->format('Y-m-d H:i:s'),
+        'updated_at' => $user->updated_at->format('Y-m-d H:i:s'),
+    ];
+
+    return response()->json($profileData, 200);
+}
+
 }

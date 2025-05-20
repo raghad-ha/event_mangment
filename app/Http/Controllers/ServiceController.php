@@ -148,10 +148,10 @@ class ServiceController extends BaiseController
         ], 201);
     }
     public function getServicesByHallName($hallName)
-    {
-                if ($this->isManagerAndUnauthorized($hallName)) {
-           return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
-        }
+     {
+    //             if ($this->isManagerAndUnauthorized($hallName)) {
+    //        return response()->json(['message' => 'You are not authorized to manage services for this hall.'], 403);
+    //     }
 
 
         // Find the hall by its name

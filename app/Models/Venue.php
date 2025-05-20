@@ -33,4 +33,5 @@ class Venue extends Model
     protected $casts = [
         'image' => 'array', // This will automatically cast the JSON string to an array when accessed
     ];
+
 }
